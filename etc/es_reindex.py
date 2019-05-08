@@ -1,18 +1,36 @@
 import rawes
 import datetime
 import sys
-
-
+import logging
+import logging.handlers
 
 #es_url='http://192.168.233.14:19200'
 #remote_url ='http://192.168.233.14:19200'
-es_url = 'http://'+str(sys.argv[1])
-remote_url = 'http://'+str(sys.argv[2])
+old_es = 'http://'+str(sys.argv[1])
+new_es = 'http://'+str(sys.argv[2])
+timeout = int(sys.argv[3])
 
 file_path='./index_list.txt'
 
-with open(str(file_path), "r") as fd:
-    lines = fd.read().splitlines()
+#Logging
+logger = logging.getLogger('reindex')
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter('[%(asctime)s] [%(levelname)s|%(filename)s:%(lineno)s] %(message)s')
+fileHandler = logging.FileHandler('reindex.log')
+streamHandler = logging.StreamHandler()
+
+fileHandler.setFormatter(formatter)
+streamHandler.setFormatter(formatter)
+
+logger.addHandler(fileHandler)
+logger.addHandler(streamHandler)
+
+
+def read_file():
+    with open(str(file_path), "r") as fd:
+        lines = fd.read().splitlines()
+    return lines
 
 def timestamp():
     now = datetime.datetime.now()
@@ -22,7 +40,7 @@ def reindex(index):
     query = {
       "source": {
         "remote": {
-          "host": str(remote_url)
+          "host": str(old_es)
         },
         "index": str(index)
       },
@@ -30,19 +48,24 @@ def reindex(index):
         "index": str(index)
       }
     }
-    es.post('/_reindex', data=query)
+    result = es.post('/_reindex', data=query)
+    return result
 
-es = rawes.Elastic(es_url, timeout=100000)
+
+lines = read_file()
+es = rawes.Elastic(new_es, timeout=timeout)
+
 for index in lines:
-    with open('../reindex_logs', "a") as fw:
-        start = timestamp()
-        fw.write('[{0}] {1} reindex start'.format(start,index))
-        #print('[{0}] {1} reindex start'.format(start,index))
-        reindex(index)
-        end = timestamp()
-        diff = end - start
-        fw.write('[{0}] {1} reindex end'.format(end,index))
-        #print('[{0}] {1} reindex end'.format(end,index))
-        fw.write("{0} has finished to reindex. elpased time is {1} sec.".format(index,diff))
-        #print("{0} has finished to reindex. elpased time is {1} sec.".format(index,diff))
-
+    start = timestamp()
+    logger.info('{} reindex start'.format(index))
+    try:
+        result = reindex(index)
+    except Exception as e:
+        logger.error('{} reindex fail'.format(index))
+        logger.error(str(e))
+        continue
+    end = timestamp()
+    diff = end - start
+    logger.info(str(result))
+    logger.info('{} reindex end'.format(index))
+    logger.info("{0} has finished to reindex. elpased time is {1} sec.".format(index,diff))
