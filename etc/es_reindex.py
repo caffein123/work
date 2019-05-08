@@ -53,9 +53,9 @@ def reindex(index):
 
 
 lines = read_file()
-es = rawes.Elastic(new_es, timeout=timeout)
 
 for index in lines:
+    es = rawes.Elastic(new_es, timeout=timeout)
     start = timestamp()
     logger.info('{} reindex start'.format(index))
     try:
