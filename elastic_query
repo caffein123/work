@@ -1,0 +1,23 @@
+{
+"query": {
+"bool": {
+"must": [
+{
+  "term": {
+  "METRIC_RESOURCE_ID": 633868
+  }
+}
+,
+{
+  "term": {
+  "METRIC_DEFINITION_ID": 1760
+  }
+}
+],
+"must_not": [ ],
+"should": [ ]
+}
+},
+"sort": [ ],
+"aggs": { }
+}
